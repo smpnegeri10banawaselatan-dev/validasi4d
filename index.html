@@ -2,68 +2,74 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Validasi Data Publik dari Google Sheets</title>
+  <title>Prediksi Angka Main dari 4D</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    select, button { font-size: 16px; padding: 8px; margin: 5px 0; }
-    .table-container { overflow-x: auto; margin-top: 20px; }
-    table { border-collapse: collapse; width: 100%; min-width: 600px; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+    input, button { font-size: 16px; padding: 8px; width: 100%; margin-top: 10px; box-sizing: border-box; }
+    .hasil { margin-top: 20px; font-size: 18px; }
+    .hasil strong { color: green; }
+    button.copy { margin-top: 10px; background: #eee; border: 1px solid #ccc; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h2>Raw Data dari Google Sheets (Publik)</h2>
-  <label>Pilih AS (kolom B):</label>
-  <select id="asSelect">
-    <option value="">Semua</option>
-  </select>
-  <button onclick="loadData()">Muat Data</button>
 
-  <div class="table-container">
-    <table id="tableData">
-      <thead><tr><th>AS</th><th>4D</th><th>3D</th><th>2D</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+<h2>Prediksi Angka Main dari Input 4D</h2>
 
-  <script>
-    const SPREADSHEET_ID = '18nXx5IcD80NT1xSkhNM4hcVmoxgzuhD0oioagDfBxBs';
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0`;
-    
-    async function loadData() {
-      const res = await fetch(csvUrl);
-      const text = await res.text();
-      const lines = text.trim().split('\n').map(line => line.split(','));
-      const rows = lines.slice(1, 11); // baris 2–11
-      const data = rows.map(cols => ({
-        AS: cols[1], prediksi4D: cols[2], prediksi3D: cols[3], prediksi2D: cols[4]
-      }));
-      
-      populateSelect(data);
-      renderTable(data);
-    }
+<label for="input4D">Masukkan Angka 4D (contoh: 1234):</label>
+<input type="text" id="input4D" maxlength="4" placeholder="Contoh: 1234">
 
-    function populateSelect(data) {
-      const select = document.getElementById('asSelect');
-      const uniqueAS = [...new Set(data.map(r => r.AS))];
-      uniqueAS.forEach(as => {
-        const opt = document.createElement('option');
-        opt.value = as;
-        opt.textContent = `AS ${as}`;
-        select.appendChild(opt);
-      });
-    }
+<button onclick="prediksiDari4D()">Prediksi Angka Main</button>
 
-    function renderTable(data) {
-      const tbody = document.getElementById('tableData').querySelector('tbody');
-      let filtered = data;
-      const sel = document.getElementById('asSelect').value;
-      if (sel) filtered = data.filter(r => r.AS === sel);
+<div class="hasil" id="hasil"></div>
+<button class="copy" onclick="salinHasil()">Salin Hasil</button>
 
-      tbody.innerHTML = filtered.map(r =>
-        `<tr><td>${r.AS}</td><td>${r.prediksi4D}</td><td>${r.prediksi3D}</td><td>${r.prediksi2D}</td></tr>`
-      ).join('') || `<tr><td colspan="4">Tidak ada data</td></tr>`;
-    }
-  </script>
+<script>
+// Pola angka main berdasarkan posisi
+const polaAngkaMain = {
+  0: ['1', '2', '3'],
+  1: ['2', '4', '5'],
+  2: ['3', '5', '6'],
+  3: ['4', '6', '7'],
+  4: ['5', '7', '8'],
+  5: ['6', '8', '9'],
+  6: ['7', '9', '0'],
+  7: ['8', '0', '1'],
+  8: ['9', '1', '2'],
+  9: ['0', '2', '3']
+};
+
+function prediksiDari4D() {
+  const input = document.getElementById('input4D').value.trim();
+  const hasilDiv = document.getElementById('hasil');
+
+  if (!/^\d{4}$/.test(input)) {
+    hasilDiv.innerHTML = '<span style="color:red;">Masukkan angka 4 digit yang valid.</span>';
+    return;
+  }
+
+  const kepala = parseInt(input.charAt(0));
+  const ekor = parseInt(input.charAt(3));
+
+  const hasilKepala = polaAngkaMain[kepala];
+  const hasilEkor = polaAngkaMain[ekor];
+  const gabungan = [...new Set([...hasilKepala, ...hasilEkor])];
+
+  hasilDiv.innerHTML = `
+    <div><strong>Input 4D:</strong> ${input}</div>
+    <div><strong>Kepala (${kepala}):</strong> ${hasilKepala.join(', ')}</div>
+    <div><strong>Ekor (${ekor}):</strong> ${hasilEkor.join(', ')}</div>
+    <div><strong>Gabungan Angka Main:</strong> ${gabungan.join(', ')}</div>
+  `;
+}
+
+function salinHasil() {
+  const text = document.getElementById('hasil').innerText;
+  if (!text) return alert('Tidak ada hasil untuk disalin.');
+  navigator.clipboard.writeText(text)
+    .then(() => alert('Hasil disalin ke clipboard.'))
+    .catch(() => alert('Gagal menyalin.'));
+}
+</script>
+
 </body>
 </html>
