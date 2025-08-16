@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prediksi Angka Main dari 4D (Lengkap dengan AS dan KOP)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: auto; }
+    textarea, button { font-size: 16px; padding: 8px; width: 100%; margin-top: 10px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 14px; }
+    th { background-color: #f4f4f4; }
+    tr.duplicate td { background-color: #ffe0e0; }
+    .summary { margin-top: 20px; font-size: 16px; white-space: pre-line; }
+    .copy-btn { margin-top: 10px; padding: 8px; font-size: 16px; background: #eee; border: 1px solid #ccc; cursor: pointer; width: 100%; }
+  </style>
+</head>
+<body>
+
+<h2>Prediksi Angka Main Berdasarkan Banyak 4D (AS, KOP, Kepala, Ekor)</h2>
+
+<label for="input4DList">Masukkan beberapa angka 4D (satu per baris):</label>
+<textarea id="input4DList" rows="8" placeholder="Contoh:\n1234\n4567\n0987\n1234"></textarea>
+
+<button onclick="prediksiOtomatis()">Prediksi Otomatis</button>
+
+<div id="tabelHasil"></div>
+<div class="summary" id="ringkasan"></div>
+<button class="copy-btn" onclick="salinRingkasan()">Salin Ringkasan</button>
+
+<script>
+const polaAngkaMain = {
+  0: ['1', '2', '3'],
+  1: ['2', '4', '5'],
+  2: ['3', '5', '6'],
+  3: ['4', '6', '7'],
+  4: ['5', '7', '8'],
+  5: ['6', '8', '9'],
+  6: ['7', '9', '0'],
+  7: ['8', '0', '1'],
+  8: ['9', '1', '2'],
+  9: ['0', '2', '3']
+};
+
+function prediksiOtomatis() {
+  const input = document.getElementById('input4DList').value.trim();
+  const tabelHasil = document.getElementById('tabelHasil');
+  const ringkasan = document.getElementById('ringkasan');
+
+  if (!input) {
+    tabelHasil.innerHTML = '<p style="color:red;">Masukkan setidaknya satu angka 4D.</p>';
+    ringkasan.innerHTML = '';
+    return;
+  }
+
+  const baris = input.split('\n').map(line => line.trim()).filter(line => /^\d{4}$/.test(line));
+  const duplikat = new Set();
+  const sudahAda = new Set();
+
+  const asSet = new Set();
+  const kopSet = new Set();
+  const kepalaSet = new Set();
+  const ekorSet = new Set();
+  const semuaAngkaMain = new Set();
+
+  const dataBaris = baris.map(angka4D => {
+    const isDuplikat = sudahAda.has(angka4D);
+    if (isDuplikat) duplikat.add(angka4D);
+    sudahAda.add(angka4D);
+
+    const as = parseInt(angka4D[0]);
+    const kop = parseInt(angka4D[1]);
+    const kepala = parseInt(angka4D[2]);
+    const ekor = parseInt(angka4D[3]);
+
+    asSet.add(as);
+    kopSet.add(kop);
+    kepalaSet.add(kepala);
+    ekorSet.add(ekor);
+
+    const angkaAS = polaAngkaMain[as] || [];
+    const angkaKOP = polaAngkaMain[kop] || [];
+    const angkaKepala = polaAngkaMain[kepala] || [];
+    const angkaEkor = polaAngkaMain[ekor] || [];
+
+    const gabungan = [...new Set([...angkaAS, ...angkaKOP, ...angkaKepala, ...angkaEkor])];
+    gabungan.forEach(a => semuaAngkaMain.add(a));
+
+    return { angka4D, as, kop, kepala, ekor, angkaAS, angkaKOP, angkaKepala, angkaEkor, gabungan, isDuplikat };
+  });
+
+  // Buat tabel hasil
+  let tabelHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>4D</th>
+          <th>AS</th>
+          <th>KOP</th>
+          <th>KEPALA</th>
+          <th>EKOR</th>
+          <th>Angka AS</th>
+          <th>Angka KOP</th>
+          <th>Angka Kepala</th>
+          <th>Angka Ekor</th>
+          <th>Gabungan</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  dataBaris.forEach((row, i) => {
+    tabelHTML += `
+      <tr class="${row.isDuplikat ? 'duplicate' : ''}">
+        <td>${i + 1}</td>
+        <td>${row.angka4D}</td>
+        <td>${row.as}</td>
+        <td>${row.kop}</td>
+        <td>${row.kepala}</td>
+        <td>${row.ekor}</td>
+        <td>${row.angkaAS.join(', ')}</td>
+        <td>${row.angkaKOP.join(', ')}</td>
+        <td>${row.angkaKepala.join(', ')}</td>
+        <td>${row.angkaEkor.join(', ')}</td>
+        <td>${row.gabungan.join(', ')}</td>
+      </tr>
+    `;
+  });
+
+  tabelHTML += '</tbody></table>';
+  tabelHasil.innerHTML = tabelHTML;
+
+  // Ringkasan
+  const hasilRingkasan = `
+📌 Total Angka 4D: ${baris.length}
+🔁 Duplikat: ${duplikat.size > 0 ? Array.from(duplikat).join(', ') : 'Tidak ada'}
+🧩 AS Unik: ${Array.from(asSet).sort().join(', ')}
+🔗 KOP Unik: ${Array.from(kopSet).sort().join(', ')}
+🧠 Kepala (digit ke-3) Unik: ${Array.from(kepalaSet).sort().join(', ')}
+🦶 Ekor (digit ke-4) Unik: ${Array.from(ekorSet).sort().join(', ')}
+
+✅ Gabungan Semua Angka Main (AS+KOP+Kepala+Ekor): ${Array.from(semuaAngkaMain).sort().join(', ')}
+  `.trim();
+
+  ringkasan.innerText = hasilRingkasan;
+}
+
+function salinRingkasan() {
+  const text = document.getElementById('ringkasan').innerText;
+  if (!text) return alert('Tidak ada hasil untuk disalin.');
+  navigator.clipboard.writeText(text)
+    .then(() => alert('Ringkasan berhasil disalin ke clipboard.'))
+    .catch(() => alert('Gagal menyalin.'));
+}
+</script>
+
+</body>
+</html>
