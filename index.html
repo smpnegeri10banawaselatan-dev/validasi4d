@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Validasi Angka Main (Auto API)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea, button { font-size: 16px; padding: 8px; width: 100%; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .valid { background-color: #c8e6c9; }
+  </style>
+</head>
+<body>
+
+<h2>Validasi Angka Berdasarkan Angka Main (Otomatis via Google Sheet)</h2>
+<textarea id="angkaMain" rows="5" placeholder="Contoh:\n1234\n5678"></textarea>
+<button onclick="validasi()">Tampilkan Semua yang Cocok</button>
+<button onclick="filterAS()">Tampilkan Hanya yang Cocok dengan AS</button>
+
+<h3>Hasil Validasi</h3>
+<table id="hasilTable">
+  <thead>
+    <tr><th>Jenis</th><th>Angka Prediksi</th><th>Cocok dengan Angka Main</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const sheetURL = 'https://docs.google.com/spreadsheets/d/18nXx5IcD80NT1xSkhNM4hcVmoxgzuhD0oioagDfBxBs/gviz/tq?tqx=out:json&sheet=Prediksi';
+let prediksi4D = [], prediksi3D = [], prediksi2D = [];
+
+function fetchData(callback) {
+  fetch(sheetURL)
+    .then(res => res.text())
+    .then(data => {
+      const json = JSON.parse(data.substring(47, data.length - 2));
+      const rows = json.table.rows;
+
+      prediksi4D = rows.map(r => r.c[2]?.v).filter(Boolean);
+      prediksi3D = rows.map(r => r.c[3]?.v).filter(Boolean);
+      prediksi2D = rows.map(r => r.c[4]?.v).filter(Boolean);
+
+      callback();
+    })
+    .catch(err => console.error("Gagal ambil data:", err));
+}
+
+function getAngkaMain() {
+  return document.getElementById("angkaMain").value.trim().split("\n")
+    .map(line => line.replace(/\D/g, '').slice(0, 8).split(""))
+    .filter(arr => arr.length > 0);
+}
+
+function cocokDenganAngkaMain(angka, angkaMain) {
+  return angkaMain.some(d => angka.includes(d));
+}
+
+function tampilkanHasil(hasil) {
+  const tbody = document.getElementById("hasilTable").querySelector("tbody");
+  tbody.innerHTML = hasil.length ? hasil.map(h =>
+    `<tr class="valid"><td>${h.jenis}</td><td>${h.angka}</td><td>${h.cocok}</td></tr>`
+  ).join("") : `<tr><td colspan="3">Tidak ada angka yang cocok</td></tr>`;
+}
+
+function validasi() {
+  fetchData(() => {
+    const angkaMainList = getAngkaMain();
+    const hasil = [];
+
+    angkaMainList.forEach(am => {
+      const cocokStr = am.join("");
+      prediksi4D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
+      prediksi3D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
+      prediksi2D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
+    });
+
+    tampilkanHasil(hasil);
+  });
+}
+
+function filterAS() {
+  fetchData(() => {
+    const angkaMainList = getAngkaMain();
+    if (angkaMainList.length === 0) return alert("Masukkan angka main.");
+
+    const as = angkaMainList[0];
+    const cocokStr = as.join("");
+    const hasil = [];
+
+    prediksi4D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
+    prediksi3D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
+    prediksi2D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
+
+    tampilkanHasil(hasil);
+  });
+}
+</script>
+
+</body>
+</html>
