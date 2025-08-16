@@ -5,26 +5,60 @@
   <title>Validasi Angka Main (Auto API)</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    textarea, button { font-size: 16px; padding: 8px; width: 100%; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    .valid { background-color: #c8e6c9; }
+    textarea, select, button {
+      font-size: 16px;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 600px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .valid {
+      background-color: #c8e6c9;
+    }
+    .copy-btn {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
-<h2>Validasi Angka Berdasarkan Angka Main (Otomatis via Google Sheet)</h2>
+<h2>Validasi Angka Berdasarkan Angka Main (Google Sheet)</h2>
+
 <textarea id="angkaMain" rows="5" placeholder="Contoh:\n1234\n5678"></textarea>
+
+<label for="asFilter">Pilih AS (0–9):</label>
+<select id="asFilter">
+  <option value="">-- Tidak Difilter --</option>
+  ${[...Array(10).keys()].map(n => `<option value="${n}">AS ${n}</option>`).join('')}
+</select>
+
 <button onclick="validasi()">Tampilkan Semua yang Cocok</button>
 <button onclick="filterAS()">Tampilkan Hanya yang Cocok dengan AS</button>
+<button onclick="salinHasil()" class="copy-btn">Salin Hasil</button>
 
 <h3>Hasil Validasi</h3>
-<table id="hasilTable">
-  <thead>
-    <tr><th>Jenis</th><th>Angka Prediksi</th><th>Cocok dengan Angka Main</th></tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<div class="table-container">
+  <table id="hasilTable">
+    <thead>
+      <tr><th>Jenis</th><th>Angka Prediksi</th><th>Cocok dengan Angka Main</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <script>
 const sheetURL = 'https://docs.google.com/spreadsheets/d/18nXx5IcD80NT1xSkhNM4hcVmoxgzuhD0oioagDfBxBs/gviz/tq?tqx=out:json&sheet=Prediksi';
@@ -63,16 +97,29 @@ function tampilkanHasil(hasil) {
   ).join("") : `<tr><td colspan="3">Tidak ada angka yang cocok</td></tr>`;
 }
 
+function filterByAS(array, asDigit) {
+  return array.filter(angka => angka.charAt(0) === asDigit);
+}
+
 function validasi() {
   fetchData(() => {
     const angkaMainList = getAngkaMain();
     const hasil = [];
+    const asDigit = document.getElementById("asFilter").value;
 
     angkaMainList.forEach(am => {
       const cocokStr = am.join("");
-      prediksi4D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
-      prediksi3D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
-      prediksi2D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
+      let data4D = prediksi4D, data3D = prediksi3D, data2D = prediksi2D;
+
+      if (asDigit !== "") {
+        data4D = filterByAS(data4D, asDigit);
+        data3D = filterByAS(data3D, asDigit);
+        data2D = filterByAS(data2D, asDigit);
+      }
+
+      data4D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
+      data3D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
+      data2D.forEach(angka => { if (cocokDenganAngkaMain(angka, am)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
     });
 
     tampilkanHasil(hasil);
@@ -86,14 +133,40 @@ function filterAS() {
 
     const as = angkaMainList[0];
     const cocokStr = as.join("");
+    const asDigit = document.getElementById("asFilter").value;
     const hasil = [];
 
-    prediksi4D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
-    prediksi3D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
-    prediksi2D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
+    let data4D = prediksi4D, data3D = prediksi3D, data2D = prediksi2D;
+
+    if (asDigit !== "") {
+      data4D = filterByAS(data4D, asDigit);
+      data3D = filterByAS(data3D, asDigit);
+      data2D = filterByAS(data2D, asDigit);
+    }
+
+    data4D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "4D", angka, cocok: cocokStr }); });
+    data3D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "3D", angka, cocok: cocokStr }); });
+    data2D.forEach(angka => { if (cocokDenganAngkaMain(angka, as)) hasil.push({ jenis: "2D", angka, cocok: cocokStr }); });
 
     tampilkanHasil(hasil);
   });
+}
+
+function salinHasil() {
+  const tbody = document.getElementById("hasilTable").querySelector("tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  if (rows.length === 0) {
+    alert("Tidak ada hasil untuk disalin.");
+    return;
+  }
+
+  const text = rows.map(row => {
+    return Array.from(row.querySelectorAll("td")).map(td => td.textContent).join("\t");
+  }).join("\n");
+
+  navigator.clipboard.writeText(text)
+    .then(() => alert("Hasil berhasil disalin ke clipboard."))
+    .catch(err => alert("Gagal menyalin: " + err));
 }
 </script>
 
