@@ -28,7 +28,7 @@
 <button class="copy-btn" onclick="salinRingkasan()">Salin Ringkasan</button>
 
 <script>
-// Pola angka main berdasarkan posisi kepala/ekor
+// Pola angka main berdasarkan kepala & ekor
 const polaAngkaMain = {
   0: ['1', '2', '3'],
   1: ['2', '4', '5'],
@@ -66,7 +66,8 @@ function prediksiOtomatis() {
     if (isDuplikat) duplikat.add(angka4D);
     sudahAda.add(angka4D);
 
-    const kepala = parseInt(angka4D[0]);
+    // kepala = digit ke-3 (index 2), ekor = digit ke-4 (index 3)
+    const kepala = parseInt(angka4D[2]);
     const ekor = parseInt(angka4D[3]);
 
     kepalaSet.add(kepala);
@@ -88,8 +89,8 @@ function prediksiOtomatis() {
         <tr>
           <th>#</th>
           <th>4D</th>
-          <th>Kepala</th>
-          <th>Ekor</th>
+          <th>Kepala (digit 3)</th>
+          <th>Ekor (digit 4)</th>
           <th>Angka Kepala</th>
           <th>Angka Ekor</th>
           <th>Gabungan</th>
@@ -119,8 +120,8 @@ function prediksiOtomatis() {
   const hasilRingkasan = `
 📌 Total Angka 4D: ${baris.length}
 🔁 Duplikat: ${duplikat.size > 0 ? Array.from(duplikat).join(', ') : 'Tidak ada'}
-🧠 Kepala Unik: ${Array.from(kepalaSet).sort().join(', ')}
-🦶 Ekor Unik: ${Array.from(ekorSet).sort().join(', ')}
+🧠 Kepala (digit ke-3) Unik: ${Array.from(kepalaSet).sort().join(', ')}
+🦶 Ekor (digit ke-4) Unik: ${Array.from(ekorSet).sort().join(', ')}
 
 ✅ Gabungan Semua Angka Main: ${Array.from(semuaAngkaMain).sort().join(', ')}
   `.trim();
