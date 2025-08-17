@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Number Pattern Lab — Kombinasi N Digit</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+  label { font-weight: 600; display:block; margin-bottom:6px; }
+  input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+  .row { margin: 12px 0; }
+  .muted { color: #666; font-size: 12px; }
+  .badge { display:inline-block; background:#eef; color:#224; padding:2px 8px; border-radius:10px; margin-left:6px; }
+  .panel { border:1px solid #ddd; border-radius:8px; padding:12px; margin-top:10px; }
+  .output { white-space: pre-wrap; border:1px solid #ddd; padding:10px; border-radius:6px; background:#fafafa; max-height:320px; overflow:auto; }
+  .heatcell { padding:8px; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; white-space: pre-line; user-select:none; }
+  .heatcell.selected { outline: 3px solid #222; }
+</style>
+</head>
+<body>
+
+<h2>Number Pattern Lab (Non-gambling)</h2>
+<p class="muted">Eksperimen kombinasi angka untuk pembelajaran & analisis pola. Gunakan secara bertanggung jawab.</p>
+
+<div class="panel">
+  <div class="grid">
+    <div>
+      <label>Panjang digit</label>
+      <select id="len">
+        <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option>
+      </select>
+    </div>
+    <div>
+      <label>Digit diizinkan</label>
+      <input id="digits" value="0123456789">
+    </div>
+    <div>
+      <label>Harus mengandung (stepwise)</label>
+      <input id="must" placeholder="mis. 379">
+      <div class="muted">Setiap digit yang ditambahkan akan memangkas hasil (di posisi mana saja).</div>
+    </div>
+    <div>
+      <label>Kecualikan digit</label>
+      <input id="exclude" placeholder="mis. 05">
+    </div>
+    <div>
+      <label>Digit awal</label>
+      <input id="startDigit" placeholder="mis. 1">
+    </div>
+    <div>
+      <label>Digit akhir</label>
+      <input id="endDigit" placeholder="mis. 9">
+    </div>
+  </div>
+
+  <div class="row" id="posContainer"></div>
+
+  <div class="grid">
+    <div>
+      <label>Jumlah digit ganjil (min–max)</label>
+      <input id="oddMin" type="number" min="0" placeholder="min">
+      <input id="oddMax" type="number" min="0" placeholder="max">
+    </div>
+    <div>
+      <label>Jumlah digit genap (min–max)</label>
+      <input id="evenMin" type="number" min="0" placeholder="min">
+      <input id="evenMax" type="number" min="0" placeholder="max">
+    </div>
+    <div>
+      <label>Total nilai digit (min–max)</label>
+      <input id="sumMin" type="number" min="0" placeholder="min">
+      <input id="sumMax" type="number" min="0" placeholder="max">
+    </div>
+  </div>
+
+  <div class="row">
+    <label>Angka keluar kemarin</label>
+    <input id="prevResult" placeholder="mis. 3927">
+  </div>
+
+  <div class="grid">
+    <div>
+      <label>Pemisah tampilan</label>
+      <select id="sep">
+        <option value="*">*</option>
+        <option value=", ">, (koma)</option>
+        <option value=" ">Space</option>
+        <option value="\n">Baris</option>
+      </select>
+    </div>
+    <div>
+      <label>Batas tampil</label>
+      <input id="limit" type="number" value="5000" min="100" max="200000">
+      <div class="muted">Untuk jaga performa tampilan.</div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <button id="copyBtn">Copy hasil</button>
+  <span class="badge" id="countBadge">0 hasil</span>
+  <span class="muted" id="note"></span>
+</div>
+
+<div id="analysisBox" class="panel muted"></div>
+<div id="heatmapBox" class="panel" style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;text-align:center"></div>
+<div class="output" id="out"></div>
+
+<script>
+const lenEl = document.getElementById('len');
+const digitsEl = document.getElementById('digits');
+const mustEl = document.getElementById('must');
+const excludeEl = document.getElementById('exclude');
+const startEl = document.getElementById('startDigit');
+const endEl = document.getElementById('endDigit');
+const posContainer = document.getElementById('posContainer');
+
+const oddMinEl = document.getElementById('oddMin');
+const oddMaxEl = document.getElementById('oddMax');
+const evenMinEl = document.getElementById('evenMin');
+const evenMaxEl = document.getElementById('evenMax');
+const sumMinEl = document.getElementById('sumMin');
+const sumMaxEl = document.getElementById('sumMax');
+
+const prevResultEl = document.getElementById('prevResult');
+const sepEl = document.getElementById('sep');
+const limitEl = document.getElementById('limit');
+const outEl = document.getElementById('out');
+const countBadge = document.getElementById('countBadge');
+const noteEl = document.getElementById('note');
+const copyBtn = document.getElementById('copyBtn');
+const analysisBox = document.getElementById('analysisBox');
+const heatmapBox = document.getElementById('heatmapBox');
+
+let heatmapFilterDigit = null;
+
+function uniqueDigits(str){
+  return [...new Set((str||'').replace(/\D/g,'').split(''))].join('');
+}
+
+function renderPositionInputs() {
+  posContainer.innerHTML = '';
+  const n = parseInt(lenEl.value, 10);
+  const wrap = document.createElement('div');
+  wrap.className = 'grid';
+  for (let i=0;i<n;i++){
+    const div = document.createElement('div');
+    div.innerHTML = `<label>Posisi ${i+1}</label><input data-pos="${i}" placeholder="mis. 3 atau 37">`;
+    wrap.appendChild(div);
+  }
+  posContainer.appendChild(wrap);
+}
+
+function cartesianBuild(digs, n, posRules, startD, endD, hardCap=300000){
+  const results = [];
+  function dfs(idx, acc){
+    if(results.length >= hardCap) return;
+    if(idx===n){
+      if(startD && acc[0]!==startD) return;
+      if(endD && acc[n-1]!==endD) return;
+      results.push(acc.join(''));
+      return;
+    }
+    const allowed = posRules[idx] || digs;
+    for(let d of allowed){
+      acc[idx]=d;
+      dfs(idx+1, acc);
+    }
+  }
+  dfs(0, new Array(n));
+  return results;
+}
+
+function applyFilters(all){
+  // Exclude
+  const excl = uniqueDigits(excludeEl.value);
+  let arr = excl ? all.filter(s => ![...excl].some(d => s.includes(d))) : all;
+
+  // Stepwise "must contain"
+  const must = uniqueDigits(mustEl.value).slice(0, 12);
+  if(must){
+    for(let d of must){
+      arr = arr.filter(s => s.includes(d));
+      if(arr.length===0) break;
+    }
+  }
+
+  // Heatmap click filter (optional)
+  if (heatmapFilterDigit !== null) {
+    arr = arr.filter(s => s.includes(String(heatmapFilterDigit)));
+  }
+
+  return arr;
+}
+
+function applyPropertyFiltersRange(arr) {
+  const oMin = oddMinEl.value ? parseInt(oddMinEl.value,10) : null;
+  const oMax = oddMaxEl.value ? parseInt(oddMaxEl.value,10) : null;
+  const eMin = evenMinEl.value ? parseInt(evenMinEl.value,10) : null;
+  const eMax = evenMaxEl.value ? parseInt(evenMaxEl.value,10) : null;
+  const sMin = sumMinEl.value ? parseInt(sumMinEl.value,10) : null;
+  const sMax = sumMaxEl.value ? parseInt(sumMaxEl.value,10) : null;
+
+  return arr.filter(s => {
+    const digits = s.split('').map(Number);
+    const odd = digits.filter(d => d % 2 === 1).length;
+    const even = digits.length - odd;
+    const sum = digits.reduce((a,b)=>a+b,0);
+
+    if (oMin !== null && odd < oMin) return false;
+    if (oMax !== null && odd > oMax) return false;
+    if (eMin !== null && even < eMin) return false;
+    if (eMax !== null && even > eMax) return false;
+    if (sMin !== null && sum < sMin) return false;
+    if (sMax !== null && sum > sMax) return false;
+    return true;
+  });
+}
+
+function analyseHistory(arr, lastDraw) {
+  const freq = {};
+  arr.forEach(num => num.split('').forEach(d => { freq[d] = (freq[d]||0)+1; }));
+  const entries = Object.entries(freq);
+  if (!entries.length) {
+    return `<strong>Analisis:</strong><br>- Belum ada hasil untuk dianalisis.<br>${lastDraw ? `- Angka terakhir: ${lastDraw}` : ''}`;
+  }
+  entries.sort((a,b)=>b[1]-a[1]);
+  const most = entries[0];
+  const least = entries[entries.length-1];
+  return `
+    <strong>Analisis:</strong><br>
+    - ${lastDraw ? `Angka terakhir: ${lastDraw}<br>` : ''}
+    - Digit paling sering: ${most[0]} (${most[1]} kali)<br>
+    - Digit paling jarang: ${least[0]} (${least[1]} kali)
+  `;
+}
+
+function renderHeatmap(arr) {
+  heatmapBox.innerHTML = '';
+  const freq = Array(10).fill(0);
+  arr.forEach(num => num.split('').forEach(d => { const i = parseInt(d,10); if(!isNaN(i)) freq[i]++; }));
+  const maxFreq = Math.max(...freq);
+
+  freq.forEach((count, digit) => {
+    // gradient merah→ungu: rendah = merah terang, tinggi = ungu
+    const intensity = maxFreq ? Math.round((count/maxFreq)*255) : 0;
+    const color = `rgb(${255-intensity},50,${intensity})`;
+    const cell = document.createElement('div');
+    cell.className = 'heatcell' + (heatmapFilterDigit === digit ? ' selected' : '');
+    cell.style.background = color;
+    cell.title = `Digit ${digit} (${count})`;
+    cell.textContent = `${digit}\n(${count})`;
+    cell.addEventListener('click', () => {
+      // toggle filter by digit
+      if (heatmapFilterDigit === digit) {
+        heatmapFilterDigit = null;
+      } else {
+        heatmapFilterDigit = digit;
+      }
+      recompute();
+    });
+    heatmapBox.appendChild(cell);
+  });
+}
+
+function recompute(){
+  noteEl.textContent = '';
+  heatmapBox.classList.toggle('muted', false);
+
+  const n = parseInt(lenEl.value,10) || 4;
+  const digsStr = uniqueDigits(digitsEl.value) || '0123456789';
+  const digs = [...new Set(digsStr.split(''))];
+
+  // Per-position rules
+  const inputs = posContainer.querySelectorAll('input[data-pos]');
+  const posRules = Array.from({length:n}, () => null);
+  inputs.forEach(inp=>{
+    const idx = parseInt(inp.getAttribute('data-pos'),10);
+    const v = uniqueDigits(inp.value);
+    if(v) posRules[idx] = [...new Set(v.split(''))];
+  });
+
+  const startD = uniqueDigits(startEl.value).slice(0,1);
+  const endD = uniqueDigits(endEl.value).slice(0,1);
+
+  // Bangun semua kombinasi (dengan pruning posisi & start/end)
+  const all = cartesianBuild(digs, n, posRules, startD, endD);
+
+  // Apply filter dasar dan filter properti
+  let arr = applyFilters(all);
+  arr = applyPropertyFiltersRange(arr);
+
+  // Render analisis & heatmap
+  analysisBox.innerHTML = analyseHistory(arr, uniqueDigits(prevResultEl.value));
+  renderHeatmap(arr);
+
+  // Render output dengan limit
+  const sep = sepEl.value === '\\n' ? '\n' : sepEl.value;
+  const limit = Math.max(100, Math.min(parseInt(limitEl.value||'5000',10), 200000));
+  const truncated = arr.length > limit;
+  const toShow = truncated ? arr.slice(0, limit) : arr;
+
+  outEl.textContent = toShow.join(sep);
+  countBadge.textContent = `${arr.length} hasil`;
+  noteEl.textContent = truncated ? `Ditampilkan ${toShow.length} pertama (dari ${arr.length}). Naikkan batas tampil bila perlu.` : '';
+}
+
+// Events
+[lenEl, digitsEl, mustEl, excludeEl, startEl, endEl,
+ oddMinEl, oddMaxEl, evenMinEl, evenMaxEl, sumMinEl, sumMaxEl,
+ prevResultEl, sepEl, limitEl].forEach(el=>el.addEventListener('input', recompute));
+
+copyBtn.addEventListener('click', ()=>{
+  navigator.clipboard.writeText(outEl.textContent||'').then(()=>{
+    copyBtn.textContent = 'Tersalin!';
+    setTimeout(()=>copyBtn.textContent='Copy hasil', 1000);
+  });
+});
+
+// Init
+renderPositionInputs();
+posContainer.addEventListener('input', recompute);
+lenEl.addEventListener('change', ()=>{
+  renderPositionInputs();
+  recompute();
+});
+recompute();
+</script>
+</body>
+</html>
